@@ -1,284 +1,256 @@
-from flask import Flask, request, render_template_string
+import os
 import pickle
 import numpy as np
+from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
-# Load Model
-with open("naive_model.pkl", "rb") as f:
-    model = pickle.load(f)
+# Base64 or inline model loading safely
+MODEL_PATH = "naive_model.pkl"
 
-# -------------------------------------------------------
-# CHANGE THESE FEATURE NAMES ACCORDING TO YOUR DATASET
-# -------------------------------------------------------
-FEATURES = [
-    "Feature 1",
-    "Feature 2",
-    "Feature 3",
-    "Feature 4"
-]
-# -------------------------------------------------------
+def get_model():
+    with open(MODEL_PATH, "rb") as f:
+        return pickle.load(f)
 
-HTML = """
-
+# Professional Business-Meeting Ready HTML & CSS Template
+HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Analytics Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --accent-color: #10b981;
+            --accent-hover: #059669;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
 
-<meta charset="UTF-8">
-<title>Naive Bayes Prediction System</title>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
 
-<style>
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:'Segoe UI',sans-serif;
-}
+        .dashboard-container {
+            width: 100%;
+            max-width: 550px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
 
-body{
+        .dashboard-header {
+            padding: 32px 32px 24px 32px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
 
-background:linear-gradient(135deg,#0f172a,#1e293b,#334155);
-height:100vh;
-display:flex;
-justify-content:center;
-align-items:center;
+        .dashboard-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 6px;
+        }
 
-}
+        .dashboard-header p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
 
-.container{
+        .dashboard-body {
+            padding: 32px;
+        }
 
-width:900px;
-background:white;
-border-radius:20px;
-overflow:hidden;
-display:flex;
-box-shadow:0px 20px 50px rgba(0,0,0,.35);
+        .form-group {
+            margin-bottom: 24px;
+        }
 
-}
+        .form-group label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
 
-.left{
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
 
-width:40%;
-background:linear-gradient(180deg,#0F766E,#115E59);
-color:white;
-padding:50px;
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
 
-display:flex;
-flex-direction:column;
-justify-content:center;
+        select.form-control {
+            appearance: none;
+            cursor: pointer;
+        }
 
-}
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--accent-color);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
 
-.left h1{
+        .btn-submit:hover {
+            background-color: var(--accent-hover);
+        }
 
-font-size:32px;
-margin-bottom:20px;
+        .btn-submit:active {
+            transform: scale(0.99);
+        }
 
-}
+        .result-box {
+            margin-top: 28px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            text-align: center;
+        }
+        
+        .result-box.negative {
+            background-color: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
 
-.left p{
+        .result-title {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
 
-line-height:28px;
-font-size:16px;
-opacity:.9;
-
-}
-
-.right{
-
-width:60%;
-padding:45px;
-
-}
-
-.right h2{
-
-color:#0F172A;
-margin-bottom:30px;
-
-}
-
-.input-group{
-
-margin-bottom:18px;
-
-}
-
-label{
-
-display:block;
-margin-bottom:7px;
-font-weight:600;
-color:#334155;
-
-}
-
-input{
-
-width:100%;
-padding:14px;
-border-radius:10px;
-border:1px solid #CBD5E1;
-font-size:15px;
-
-}
-
-input:focus{
-
-outline:none;
-border:1px solid #0F766E;
-
-}
-
-button{
-
-width:100%;
-padding:15px;
-background:#0F766E;
-border:none;
-color:white;
-font-size:18px;
-font-weight:bold;
-border-radius:10px;
-cursor:pointer;
-transition:.3s;
-
-}
-
-button:hover{
-
-background:#115E59;
-transform:scale(1.02);
-
-}
-
-.result{
-
-margin-top:25px;
-padding:18px;
-background:#ECFDF5;
-border-left:6px solid #10B981;
-border-radius:10px;
-font-size:20px;
-font-weight:bold;
-color:#065F46;
-
-}
-
-.footer{
-
-margin-top:25px;
-text-align:center;
-font-size:14px;
-color:#94A3B8;
-
-}
-
-</style>
-
+        .result-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        
+        .result-box.positive .result-value { color: #10b981; }
+        .result-box.negative .result-value { color: #ef4444; }
+    </style>
 </head>
-
 <body>
 
-<div class="container">
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Predictive Business Intelligence</h1>
+        <p>Naive Bayes Classification Model Deployment</p>
+    </div>
+    
+    <div class="dashboard-body">
+        <form method="POST" action="/">
+            <div class="form-group">
+                <label for="gender">Gender</label>
+                <select name="gender" id="gender" class="form-control" required>
+                    <option value="1" {% if inputs and inputs['gender'] == '1' %}selected{% endif %}>Male</option>
+                    <option value="0" {% if inputs and inputs['gender'] == '0' %}selected{% endif %}>Female</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="age">Age</label>
+                <input type="number" name="age" id="age" class="form-control" placeholder="e.g., 35" min="0" value="{{ inputs['age'] if inputs else '' }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="salary">Estimated Salary ($)</label>
+                <input type="number" name="salary" id="salary" class="form-control" placeholder="e.g., 75000" min="0" value="{{ inputs['salary'] if inputs else '' }}" required>
+            </div>
+            
+            <button type="submit" class="btn-submit">Execute Prediction</button>
+        </form>
 
-<div class="left">
-
-<h1>Business Intelligence</h1>
-
-<p>
-
-Professional Machine Learning Prediction Dashboard
-
-built using Flask & Scikit-Learn.
-
-Designed for business presentations and client demonstrations.
-
-</p>
-
-</div>
-
-<div class="right">
-
-<h2>Naive Bayes Prediction</h2>
-
-<form method="POST">
-
-{% for feature in features %}
-
-<div class="input-group">
-
-<label>{{feature}}</label>
-
-<input
-type="number"
-step="any"
-name="{{feature}}"
-required>
-
-</div>
-
-{% endfor %}
-
-<button type="submit">
-
-Predict
-
-</button>
-
-</form>
-
-{% if prediction %}
-
-<div class="result">
-
-Prediction : {{prediction}}
-
-</div>
-
-{% endif %}
-
-<div class="footer">
-
-Machine Learning Deployment using Flask + Render
-
-</div>
-
-</div>
-
+        {% if prediction is not none %}
+            {% if prediction == 1 %}
+            <div class="result-box positive">
+                <div class="result-title">Model Target Output</div>
+                <div class="result-value">Positive / Likely to Purchase (Class 1)</div>
+            </div>
+            {% else %}
+            <div class="result-box negative">
+                <div class="result-title">Model Target Output</div>
+                <div class="result-value">Negative / Unlikely to Purchase (Class 0)</div>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
 </div>
 
 </body>
-
 </html>
-
 """
 
 @app.route("/", methods=["GET", "POST"])
 def home():
-
     prediction = None
-
+    inputs = None
+    
     if request.method == "POST":
-
-        values = []
-
-        for feature in FEATURES:
-            values.append(float(request.form[feature]))
-
-        data = np.array(values).reshape(1, -1)
-
-        pred = model.predict(data)
-
-        prediction = pred[0]
-
-    return render_template_string(
-        HTML,
-        features=FEATURES,
-        prediction=prediction
-    )
+        try:
+            # Capturing inputs based on feature order: Gender, Age, EstimatedSalary
+            gender = int(request.form.get("gender"))
+            age = float(request.form.get("age"))
+            salary = float(request.form.get("salary"))
+            
+            inputs = {
+                "gender": request.form.get("gender"),
+                "age": request.form.get("age"),
+                "salary": request.form.get("salary")
+            }
+            
+            # Formulate feature array matching the model structure
+            features = np.array([[gender, age, salary]])
+            
+            # Inference
+            model = get_model()
+            prediction = int(model.predict(features)[0])
+        except Exception as e:
+            prediction = f"Error evaluating inputs: {str(e)}"
+            
+    return render_template_string(HTML_TEMPLATE, prediction=prediction, inputs=inputs)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    # Bind to PORT provided by Render environment
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
